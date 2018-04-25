@@ -1,4 +1,7 @@
 # SentimentAnalysis
+
+[![Build Status](https://travis-ci.org/xlstefan/SentimentAnalysis.svg?branch=master)](https://travis-ci.org/xlstefan/SentimentAnalysis)
+
 Sentiment analysis of the Serbian language on the continual scale
 
 == To Do ==
