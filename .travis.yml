@@ -4,5 +4,8 @@ mvn install -DskipTests=true -Dmaven.javadoc.skip=true -B -V
 
 mvn test -B
 
+notifications:
+  email:
+    - as173176m@student.etf.bg.ac.rs
 
 # https://docs.travis-ci.com/user/languages/java/
