@@ -9,7 +9,6 @@ public class CommentsFile {
     private static final String SEPARATOR = "\n";
 
     private List<Line> lines;
-    private CommentsFileListner listner;
 
     public CommentsFile(String fileContent) {
         lines = Arrays.stream(fileContent.split(SEPARATOR))
@@ -17,20 +16,8 @@ public class CommentsFile {
                 .collect(Collectors.toList());
     }
 
-    public void setListner(CommentsFileListner listner) {
-        this.listner = listner;
-    }
-
-    public interface CommentsFileListner {
-        void onLineChange(int lineIndex);
-    }
-
     public void writeScore(int lineIndex, int score) {
         lines.get(lineIndex).setScore(score);
-
-        if (listner != null) {
-            listner.onLineChange(lineIndex);
-        }
     }
 
     public int linesCount() {
@@ -48,5 +35,9 @@ public class CommentsFile {
     @Deprecated
     public List<Line> getLines() {
         return Collections.unmodifiableList(lines);
+    }
+
+    public Line getLine(int index) {
+        return lines.get(index);
     }
 }

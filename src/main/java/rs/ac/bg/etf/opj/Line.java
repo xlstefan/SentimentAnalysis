@@ -36,6 +36,10 @@ public class Line {
         return isAnotated;
     }
 
+    public void removeAnotation() {
+        isAnotated = false;
+    }
+
     public void setScore(int score) {
         this.score = score;
         isAnotated = true;
