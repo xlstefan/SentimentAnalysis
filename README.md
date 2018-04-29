@@ -2,9 +2,14 @@
 
 [![Build Status](https://travis-ci.org/xlstefan/SentimentAnalysis.svg?branch=master)](https://travis-ci.org/xlstefan/SentimentAnalysis)
 
-Sentiment analysis of the Serbian language on the continual scale
+## Sentiment analysis of the Serbian language on the continual scale
 
-== To Do ==
+**Important notes**
+
+*This repository is a fork of the <a href="https://github.com/vukbatanovic/STSAnno">STSAnno</a> repository.*
+
+*Licence stays the same: <a href="https://github.com/xlstefan/SentimentAnalysis/blob/master/LICENSE">GPL-3.0</a>*
+
 ## How to setup environment?
 Prerequisites:
 - Maven
