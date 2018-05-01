@@ -1,6 +1,8 @@
 package rs.ac.bg.etf.opj;
 
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.metal.MetalSliderUI;
 import java.awt.*;
@@ -180,6 +182,36 @@ public class CommentsAnno extends JFrame {
                 slider.setValue(value);
 
                 commentsFile.writeScore(currentLine, value);
+
+                if (jumpToNext) {
+                    for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
+                        if (!commentsFile.getLines().get(i).isAnotated()) {
+                            currentLine = i;
+                            break;
+                        }
+                    }
+                }
+                updateGUI();
+            }
+        });
+
+        scoreSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                JSlider slider = (JSlider)e.getSource();
+                int value = slider.getValue();
+                scoreSlider.setValue(value);
+
+                Thread writeThread = new Thread(){
+                    public void run(){
+                        commentsFile.writeScore(currentLine, value);
+                        notify();
+                    }
+                };
+
+                writeThread.start();
+
+                while(writeThread.isAlive());
 
                 if (jumpToNext) {
                     for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
