@@ -6,46 +6,31 @@ import javax.swing.plaf.metal.MetalSliderUI;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
 public class CommentsAnno extends JFrame {
-
-    private final String filePath;
-    // Interface strings
-    private String txtFileExtensionString = "TXT file";
-    private String windowTitleString = "Semantic textual similarity annotation";
-    private String text1LabelString = "Text 1:";
-    private String lineLabelString1 = "Line ";
-    private String lineLabelString2 = " of ";
-    private String scoredString = "Scored: ";
-    private String unscoredString = "Unscored: ";
-    private String saveButtonString = "Save data to file";
-    private String jumpToNextPairCheckboxString = "Automatically jump to the next not scored pair";
-    private String dataSavedMessageString = "Data saved!";
-
     // Program logic
-    private int currentLine = 1;
+    private final String filePath;
+    private int currentLine = 0;
     private boolean jumpToNext = false;
 
     // GUI Dimensions
-    private Dimension windowDimension = new Dimension(800, 585);
-    private Dimension textAreaDimension = new Dimension(750, 100);
-    private Dimension scrollPaneDimension = new Dimension(750, 200);
+    private Dimension windowDimension = new Dimension(1000, 600);
+    private Dimension textAreaDimension = new Dimension(950, 400);
+    private Dimension scrollPaneDimension = new Dimension(950, 200);
 
     // GUI Elements
-    private JTextArea text1Area = new JTextArea();
+    private JTextArea commentsArea = new JTextArea();
     private JPanel upperPanel = new JPanel();
     private JPanel lowerPanel = new JPanel();
     private JPanel bottomPanel = new JPanel();
     private JPanel infoPanel = new JPanel();
     private JPanel labelPanel = new JPanel();
-    private JButton saveButton = new JButton(saveButtonString);
+    private JButton saveButton = new JButton("Save data to file");
     private JLabel info1Label = new JLabel();
     private JLabel info2Label = new JLabel();
     private JLabel statisticsLabel = new JLabel();
@@ -53,7 +38,7 @@ public class CommentsAnno extends JFrame {
     private DefaultListModel<String> scrollPaneListModel = new DefaultListModel<>();
     private JList<String> scrollPaneList = new JList<>(scrollPaneListModel);
     private JScrollPane scrollPane = new JScrollPane(scrollPaneList);
-    private JCheckBox jumpToNextPairCheckbox = new JCheckBox(jumpToNextPairCheckboxString);
+    private JCheckBox jumpToNextPairCheckbox = new JCheckBox("Automatically jump to the next not scored pair");
     private CommentsFile commentsFile;
     private JSlider scoreSlider;
 
@@ -65,7 +50,7 @@ public class CommentsAnno extends JFrame {
     private class STSListCellRenderer extends DefaultListCellRenderer {
         private CommentsFile commentsFile;
 
-        public STSListCellRenderer(CommentsFile commentsFile) {
+        STSListCellRenderer(CommentsFile commentsFile) {
             super();
             this.commentsFile = commentsFile;
         }
@@ -86,7 +71,7 @@ public class CommentsAnno extends JFrame {
 
     private String readInputAbsoluteFilePath() {
         JFileChooser fc = new JFileChooser();
-        FileNameExtensionFilter ff = new javax.swing.filechooser.FileNameExtensionFilter(txtFileExtensionString, "txt");
+        FileNameExtensionFilter ff = new javax.swing.filechooser.FileNameExtensionFilter("TXT file", "txt");
         fc.setFileFilter(ff);
         fc.setCurrentDirectory(Paths.get(".").toFile());
         int returnVal = fc.showOpenDialog(null);
@@ -105,19 +90,22 @@ public class CommentsAnno extends JFrame {
         infoPanel.add(lineField);
         infoPanel.add(info2Label);
         lineField.setEditable(true);
+        lineField.setColumns(3);
         labelPanel.setLayout(new GridLayout(2, 1));
         labelPanel.add(infoPanel);
         labelPanel.add(statisticsLabel);
 
         // TextArea settings
-        text1Area.setMargin(new Insets(3, 5, 3, 5));
-        text1Area.setEditable(false);
-        text1Area.setLineWrap(true);
-        text1Area.setWrapStyleWord(true);
-        text1Area.setPreferredSize(textAreaDimension);
+        commentsArea.setMargin(new Insets(3, 5, 3, 5));
+        commentsArea.setEditable(false);
+        commentsArea.setLineWrap(true);
+        commentsArea.setWrapStyleWord(true);
+        commentsArea.setFont(new Font("serif", Font.PLAIN, 22));
+        commentsArea.setPreferredSize(textAreaDimension);
         upperPanel.setLayout(new BorderLayout());
-        upperPanel.add("Center", text1Area);
-        upperPanel.add("North", new JLabel(text1LabelString));
+        upperPanel.add("Center", commentsArea);
+        String commentsLabel = "Comment:";
+        upperPanel.add("North", new JLabel(commentsLabel));
         JPanel textPanel = new JPanel(new FlowLayout());
         textPanel.add(upperPanel);
 
@@ -129,26 +117,6 @@ public class CommentsAnno extends JFrame {
         scoreSlider.setMinorTickSpacing(1);
         scoreSlider.setPaintTicks(true);
         scoreSlider.setPaintLabels(true);
-
-        scoreSlider.setUI(new MetalSliderUI() {
-            protected void scrollDueToClickInTrack(int direction) {
-                int value = this.valueForXPosition(slider.getMousePosition().x);
-                slider.setValue(value);
-
-                commentsFile.writeScore(currentLine, value);
-
-                System.out.println(currentLine);
-                if (jumpToNext) {
-                    for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
-                        if (!commentsFile.getLines().get(i).isAnotated()) {
-                            currentLine = i;
-                            break;
-                        }
-                    }
-                }
-                updateGui();
-            }
-        });
 
         lowerPanel.add(scoreSlider);
         lowerPanel.add(saveButton);
@@ -171,16 +139,29 @@ public class CommentsAnno extends JFrame {
         mainPanel.add("North", labelPanel);
         this.setContentPane(mainPanel);
         this.setSize(windowDimension);
-        this.setTitle(windowTitleString);
+        this.setTitle("Movie comments annotation");
         this.setVisible(true);
         this.setLocationRelativeTo(null);
         this.setResizable(false);
     }
 
-    /**
-     * Adds the listeners for the ScrollPane, the line input field, the checkbox, all the buttons, and the main window
-     */
     private void addListeners() {
+        /*
+         * Move the ScrollPane to the line whose line number has been entered in the text field
+         * Update the TextAreas and the info section
+         */
+        lineField.addActionListener(e -> {
+            try {
+                int lineInd = Integer.parseInt(lineField.getText());
+                if (lineInd > 0 && lineInd <= commentsFile.linesCount())
+                {
+                    currentLine = lineInd - 1;
+                    updateGUI();
+                }
+            } catch (NumberFormatException ex) {
+            }
+        });
+
         /*
          * Move the ScrollPane to the selected pair in the corpus and update the TextAreas and the info section
          */
@@ -188,41 +169,37 @@ public class CommentsAnno extends JFrame {
             int input = scrollPaneList.getSelectedIndex();
             if (currentLine != input && input > 0) {
                 currentLine = scrollPaneList.getSelectedIndex();
-                updateGui();
+                updateGUI();
             }
 
         });
 
-        /*
-         * Move the ScrollPane to the pair whose line number has been entered in the text field
-         * Update the TextAreas and the info section
-         */
-        lineField.addActionListener(e -> {
-            try {
-                int lineInd = Integer.parseInt(lineField.getText());
-                if (lineInd > 0 && lineInd <= commentsFile.linesCount())
-                // The updateCurrentLine method is called implicitly here, via the ListSelectionListener valueChanged method
-                {
-                    //scrollPaneList.setSelectedIndex(lineInd - 1);
-                    currentLine = lineInd - 1;
-                    updateGui();
+        scoreSlider.setUI(new MetalSliderUI() {
+            protected void scrollDueToClickInTrack(int direction) {
+                int value = this.valueForXPosition(slider.getMousePosition().x);
+                slider.setValue(value);
+
+                commentsFile.writeScore(currentLine, value);
+
+                if (jumpToNext) {
+                    for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
+                        if (!commentsFile.getLines().get(i).isAnotated()) {
+                            currentLine = i;
+                            break;
+                        }
+                    }
                 }
-            } catch (NumberFormatException ex) {
+                updateGUI();
             }
         });
 
         saveButton.addActionListener(e -> {
             FileHandler.saveToFile(filePath, commentsFile);
-            JOptionPane.showMessageDialog(null, dataSavedMessageString, "", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Data saved!", "", JOptionPane.INFORMATION_MESSAGE);
         });
-
 
         jumpToNextPairCheckbox.addActionListener(e -> jumpToNext = jumpToNextPairCheckbox.isSelected());
 
-        /*
-         * Saves the (partially) annotated corpus in its current state to the starting corpus file,
-         * which is overwritten, and closes the main window
-         */
         this.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 FileHandler.saveToFile(filePath, commentsFile);
@@ -231,23 +208,23 @@ public class CommentsAnno extends JFrame {
         });
     }
 
-    private void updateGui() {
+    private void updateGUI() {
         updateInfo();
         updateCommentArea();
         updateScrollPane();
     }
 
     private void updateInfo() {
-        info1Label.setText(lineLabelString1);
+        info1Label.setText("Line ");
         lineField.setText(Integer.toString(currentLine + 1));
-        info2Label.setText(lineLabelString2 + commentsFile.linesCount());
-        statisticsLabel.setText(scoredString + commentsFile.annotatedCount() + "          " + unscoredString + commentsFile.notAnnotatedCount());
+        info2Label.setText(" of " + commentsFile.linesCount());
+        statisticsLabel.setText("Scored: " + commentsFile.annotatedCount() + "          " + "Not annotated: " + commentsFile.notAnnotatedCount());
     }
 
     private void updateCommentArea() {
         Line line = commentsFile.getLine(currentLine);
 
-        text1Area.setText(line.getComment());
+        commentsArea.setText(line.getComment());
         if (line.isAnotated()) {
             scoreSlider.setValue(line.getScore());
         } else {
@@ -271,7 +248,7 @@ public class CommentsAnno extends JFrame {
         initializeGUI();
         addListeners();
 
-        updateGui();
+        updateGUI();
     }
 
     public static void main(String[] args) {

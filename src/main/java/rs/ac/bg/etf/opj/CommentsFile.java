@@ -32,7 +32,7 @@ public class CommentsFile {
         return linesCount() - annotatedCount();
     }
 
-    @Deprecated
+
     public List<Line> getLines() {
         return Collections.unmodifiableList(lines);
     }
