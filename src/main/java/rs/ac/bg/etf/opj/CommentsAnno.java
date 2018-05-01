@@ -8,7 +8,6 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.logging.Level;
@@ -17,6 +16,7 @@ import java.util.logging.Logger;
 
 public class CommentsAnno extends JFrame {
 
+    private final String filePath;
     // Interface strings
     private String txtFileExtensionString = "TXT file";
     private String windowTitleString = "Semantic textual similarity annotation";
@@ -26,11 +26,10 @@ public class CommentsAnno extends JFrame {
     private String scoredString = "Scored: ";
     private String unscoredString = "Unscored: ";
     private String saveButtonString = "Save data to file";
-    private String jumpToNextPairCheckboxString = "Automatically jump to the next pair";
+    private String jumpToNextPairCheckboxString = "Automatically jump to the next not scored pair";
     private String dataSavedMessageString = "Data saved!";
 
     // Program logic
-    private File corpusFile;
     private int currentLine = 1;
     private boolean jumpToNext = false;
 
@@ -51,24 +50,17 @@ public class CommentsAnno extends JFrame {
     private JLabel info2Label = new JLabel();
     private JLabel statisticsLabel = new JLabel();
     private JTextField lineField = new JTextField();
-    private DefaultListModel<String> scrollPaneListModel = new DefaultListModel<String>();
-    private JList<String> scrollPaneList = new JList<String>(scrollPaneListModel);
+    private DefaultListModel<String> scrollPaneListModel = new DefaultListModel<>();
+    private JList<String> scrollPaneList = new JList<>(scrollPaneListModel);
     private JScrollPane scrollPane = new JScrollPane(scrollPaneList);
     private JCheckBox jumpToNextPairCheckbox = new JCheckBox(jumpToNextPairCheckboxString);
     private CommentsFile commentsFile;
-    private JSlider temp;
-
-    public void onLineChange(int lineIndex) {
-        scrollPaneListModel
-                .setElementAt(commentsFile.getLine(scrollPaneList.getSelectedIndex()).toString().replace("\t", " "),
-                              lineIndex);
-    }
+    private JSlider scoreSlider;
 
     /**
      * A custom ListCellRenderer that highlights text pairs in the scroll pane according to their annotation status:
      * - White background - an unscored pair
-     * - Gray background - a scored pair
-     * - Yellow background - a pair that has been skipped
+     * - Yellow background - a pair that has been scored
      */
     private class STSListCellRenderer extends DefaultListCellRenderer {
         private CommentsFile commentsFile;
@@ -89,14 +81,10 @@ public class CommentsAnno extends JFrame {
             }
             return c;
         }
+
     }
 
-    /**
-     * Input file selection dialog - STS corpus should be in a TXT file
-     *
-     * @return Path to the STS corpus file
-     */
-    private String selectInputFile() {
+    private String readInputAbsoluteFilePath() {
         JFileChooser fc = new JFileChooser();
         FileNameExtensionFilter ff = new javax.swing.filechooser.FileNameExtensionFilter(txtFileExtensionString, "txt");
         fc.setFileFilter(ff);
@@ -106,21 +94,6 @@ public class CommentsAnno extends JFrame {
             System.exit(0);
         }
         return fc.getSelectedFile().getAbsolutePath();
-    }
-
-    /**
-     * Reads in the data from the given STS corpus file
-     *
-     * @param filePath Path to the STS corpus file
-     * @throws IOException
-     */
-    private void readCorpusFileData(String filePath) throws IOException {
-        String fileContent = new String(Files.readAllBytes(Paths.get(filePath)), "UTF-8");
-        corpusFile = new File(filePath);
-
-        commentsFile = new CommentsFile(fileContent);
-
-        commentsFile.getLines().forEach(l -> scrollPaneListModel.addElement(l.toString().replace("\t", " ")));
     }
 
     private void initializeGUI() {
@@ -151,30 +124,33 @@ public class CommentsAnno extends JFrame {
         // Command buttons settings
         lowerPanel.setLayout(new FlowLayout());
 
-        temp = new JSlider(-5, 5);
+        scoreSlider = new JSlider(-5, 5);
+        scoreSlider.setMajorTickSpacing(1);
+        scoreSlider.setMinorTickSpacing(1);
+        scoreSlider.setPaintTicks(true);
+        scoreSlider.setPaintLabels(true);
 
-        temp.setMajorTickSpacing(1);
-        temp.setMinorTickSpacing(1);
-        temp.setPaintTicks(true);
-        temp.setPaintLabels(true);
-
-        temp.setUI(new MetalSliderUI() {
+        scoreSlider.setUI(new MetalSliderUI() {
             protected void scrollDueToClickInTrack(int direction) {
-                // this is the default behaviour, let's comment that out
-                //scrollByBlock(direction);
-
-                int value = slider.getValue();
-
-                value = this.valueForXPosition(slider.getMousePosition().x);
-
+                int value = this.valueForXPosition(slider.getMousePosition().x);
+                slider.setValue(value);
 
                 commentsFile.writeScore(currentLine, value);
-                onLineChange(currentLine);
-                slider.setValue(value);
+
+                System.out.println(currentLine);
+                if (jumpToNext) {
+                    for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
+                        if (!commentsFile.getLines().get(i).isAnotated()) {
+                            currentLine = i;
+                            break;
+                        }
+                    }
+                }
+                updateGui();
             }
         });
 
-        lowerPanel.add(temp);
+        lowerPanel.add(scoreSlider);
         lowerPanel.add(saveButton);
         lowerPanel.add(jumpToNextPairCheckbox);
 
@@ -205,16 +181,19 @@ public class CommentsAnno extends JFrame {
      * Adds the listeners for the ScrollPane, the line input field, the checkbox, all the buttons, and the main window
      */
     private void addListeners() {
-        /**
+        /*
          * Move the ScrollPane to the selected pair in the corpus and update the TextAreas and the info section
          */
         scrollPaneList.addListSelectionListener(arg0 -> {
-            setSelectedLine(scrollPaneList.getSelectedIndex());
-            updateInfo();
-            scrollPaneList.ensureIndexIsVisible(scrollPaneList.getSelectedIndex());
+            int input = scrollPaneList.getSelectedIndex();
+            if (currentLine != input && input > 0) {
+                currentLine = scrollPaneList.getSelectedIndex();
+                updateGui();
+            }
+
         });
 
-        /**
+        /*
          * Move the ScrollPane to the pair whose line number has been entered in the text field
          * Update the TextAreas and the info section
          */
@@ -222,43 +201,40 @@ public class CommentsAnno extends JFrame {
             try {
                 int lineInd = Integer.parseInt(lineField.getText());
                 if (lineInd > 0 && lineInd <= commentsFile.linesCount())
-                // The setSelectedLine method is called implicitly here, via the ListSelectionListener valueChanged method
+                // The updateCurrentLine method is called implicitly here, via the ListSelectionListener valueChanged method
                 {
-                    scrollPaneList.setSelectedIndex(lineInd - 1);
+                    //scrollPaneList.setSelectedIndex(lineInd - 1);
+                    currentLine = lineInd - 1;
+                    updateGui();
                 }
             } catch (NumberFormatException ex) {
             }
         });
 
-
-        /**
-         * Save the (partially) annotated corpus in its current state to the starting corpus file, which is overwritten
-         */
         saveButton.addActionListener(e -> {
-            saveToFile();
+            FileHandler.saveToFile(filePath, commentsFile);
             JOptionPane.showMessageDialog(null, dataSavedMessageString, "", JOptionPane.INFORMATION_MESSAGE);
         });
 
-        /**
-         * If this checkbox is selected the program will automatically jump to the first unscored/skipped text pair after the current pair is annotated
-         */
-        jumpToNextPairCheckbox.addActionListener(e -> {
-            if (jumpToNextPairCheckbox.isSelected()) {
-                jumpToNext = true;
-            } else {
-                jumpToNext = false;
-            }
-        });
 
-        /**
-         * Saves the (partially) annotated corpus in its current state to the starting corpus file, which is overwritten, and closes the main window
+        jumpToNextPairCheckbox.addActionListener(e -> jumpToNext = jumpToNextPairCheckbox.isSelected());
+
+        /*
+         * Saves the (partially) annotated corpus in its current state to the starting corpus file,
+         * which is overwritten, and closes the main window
          */
         this.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
-                saveToFile();
+                FileHandler.saveToFile(filePath, commentsFile);
                 CommentsAnno.this.dispose();
             }
         });
+    }
+
+    private void updateGui() {
+        updateInfo();
+        updateCommentArea();
+        updateScrollPane();
     }
 
     private void updateInfo() {
@@ -268,40 +244,34 @@ public class CommentsAnno extends JFrame {
         statisticsLabel.setText(scoredString + commentsFile.annotatedCount() + "          " + unscoredString + commentsFile.notAnnotatedCount());
     }
 
-    private void setSelectedLine(int selectedLine) {
-        currentLine = selectedLine;
-        Line line = commentsFile.getLine(selectedLine);
+    private void updateCommentArea() {
+        Line line = commentsFile.getLine(currentLine);
 
         text1Area.setText(line.getComment());
         if (line.isAnotated()) {
-            temp.setValue(line.getScore());
+            scoreSlider.setValue(line.getScore());
         } else {
-            temp.setValue(0);
+            scoreSlider.setValue(0);
         }
     }
 
-    private void saveToFile() {
-        PrintWriter fwout = null;
-        try {
-            corpusFile.delete();
-            corpusFile.createNewFile();
-            fwout = new PrintWriter(corpusFile, "UTF-8");
+    private void updateScrollPane() {
+        scrollPaneListModel.clear();
+        commentsFile.getLines()
+                .forEach(l -> scrollPaneListModel.addElement(l.toString().replace("\t", " ")));
 
-            commentsFile.getLines().forEach(fwout::println);
-
-        } catch (IOException e) {
-            Logger.getLogger(CommentsAnno.class.getName()).log(Level.SEVERE, "Error during saving file: ", e);
-        } finally {
-            fwout.close();
-        }
+        scrollPaneList.setSelectedIndex(currentLine);
+        scrollPaneList.ensureIndexIsVisible(currentLine);
     }
-
 
     private CommentsAnno() throws IOException {
-        String corpusFilePath = selectInputFile();
-        readCorpusFileData(corpusFilePath);
+        filePath = readInputAbsoluteFilePath();
+        commentsFile = FileHandler.createCommentsFile(filePath);
+
         initializeGUI();
         addListeners();
+
+        updateGui();
     }
 
     public static void main(String[] args) {
