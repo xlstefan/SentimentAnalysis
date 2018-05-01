@@ -205,7 +205,6 @@ public class CommentsAnno extends JFrame {
                 Thread writeThread = new Thread(){
                     public void run(){
                         commentsFile.writeScore(currentLine, value);
-                        notify();
                     }
                 };
 
