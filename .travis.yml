@@ -5,5 +5,8 @@ script: mvn clean verify
 notifications:
   email:
     - as173176m@student.etf.bg.ac.rs
+  slack:
+    on_success: always
+    on_failure: always
 
 # https://docs.travis-ci.com/user/languages/java/
