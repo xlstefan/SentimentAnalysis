@@ -155,8 +155,7 @@ public class CommentsAnno extends JFrame {
         lineField.addActionListener(e -> {
             try {
                 int lineInd = Integer.parseInt(lineField.getText());
-                if (lineInd > 0 && lineInd <= commentsFile.linesCount())
-                {
+                if (lineInd > 0 && lineInd <= commentsFile.linesCount()) {
                     currentLine = lineInd - 1;
                     updateGUI();
                 }
@@ -176,42 +175,10 @@ public class CommentsAnno extends JFrame {
 
         });
 
-        scoreSlider.setUI(new MetalSliderUI() {
-            protected void scrollDueToClickInTrack(int direction) {
-                int value = this.valueForXPosition(slider.getMousePosition().x);
-                slider.setValue(value);
-
-                commentsFile.writeScore(currentLine, value);
-
-                if (jumpToNext) {
-                    for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
-                        if (!commentsFile.getLines().get(i).isAnotated()) {
-                            currentLine = i;
-                            break;
-                        }
-                    }
-                }
-                updateGUI();
-            }
-        });
-
-        scoreSlider.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                JSlider slider = (JSlider)e.getSource();
-                int value = slider.getValue();
-                scoreSlider.setValue(value);
-
-                Thread writeThread = new Thread(){
-                    public void run(){
-                        commentsFile.writeScore(currentLine, value);
-                    }
-                };
-
-                writeThread.start();
-
-                while(writeThread.isAlive());
-
+        scoreSlider.addChangeListener(e -> {
+            JSlider slider = (JSlider) e.getSource();
+            if (!slider.getValueIsAdjusting()) {
+                commentsFile.writeScore(currentLine, slider.getValue());
                 if (jumpToNext) {
                     for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
                         if (!commentsFile.getLines().get(i).isAnotated()) {
@@ -243,6 +210,7 @@ public class CommentsAnno extends JFrame {
         updateInfo();
         updateCommentArea();
         updateScrollPane();
+        updateSlider();
     }
 
     private void updateInfo() {
@@ -256,9 +224,14 @@ public class CommentsAnno extends JFrame {
         Line line = commentsFile.getLine(currentLine);
 
         commentsArea.setText(line.getComment());
+    }
+
+    private void updateSlider() {
+        Line line = commentsFile.getLine(currentLine);
         if (line.isAnotated()) {
             scoreSlider.setValue(line.getScore());
         } else {
+            scoreSlider.setValueIsAdjusting(true);
             scoreSlider.setValue(0);
         }
     }
