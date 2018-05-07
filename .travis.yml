@@ -6,7 +6,5 @@ notifications:
   email:
     - as173176m@student.etf.bg.ac.rs
   slack: zuehlke-rs:c0yRi4KBmJ46fpkCwDlz3E78
-    on_success: always
-    on_failure: always
 
 # https://docs.travis-ci.com/user/languages/java/
