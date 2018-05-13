@@ -168,7 +168,7 @@ public class CommentsAnno extends JFrame {
          */
         scrollPaneList.addListSelectionListener(arg0 -> {
             int input = scrollPaneList.getSelectedIndex();
-            if (currentLine != input && input > 0) {
+            if (currentLine != input && input > -1) {
                 currentLine = scrollPaneList.getSelectedIndex();
                 updateGUI();
             }
