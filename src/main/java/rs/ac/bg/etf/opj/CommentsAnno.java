@@ -40,6 +40,7 @@ public class CommentsAnno extends JFrame {
     private DefaultListModel<String> scrollPaneListModel = new DefaultListModel<>();
     private JList<String> scrollPaneList = new JList<>(scrollPaneListModel);
     private JScrollPane scrollPane = new JScrollPane(scrollPaneList);
+    private JButton eraseScoreButton = new JButton("Erase score");
     private JCheckBox jumpToNextPairCheckbox = new JCheckBox("Automatically jump to the next not scored pair");
     private CommentsFile commentsFile;
     private JSlider scoreSlider;
@@ -121,6 +122,7 @@ public class CommentsAnno extends JFrame {
         scoreSlider.setPaintLabels(true);
 
         lowerPanel.add(scoreSlider);
+        lowerPanel.add(eraseScoreButton);
         lowerPanel.add(saveButton);
         lowerPanel.add(jumpToNextPairCheckbox);
 
@@ -189,6 +191,20 @@ public class CommentsAnno extends JFrame {
                 }
                 updateGUI();
             }
+        });
+
+        eraseScoreButton.addActionListener(e -> {
+            if (commentsFile.deleteScore(currentLine)) updateGUI();
+            if (jumpToNext) {
+                for (int i = currentLine + 1; i < commentsFile.getLines().size(); i++) {
+                    if (!commentsFile.getLines().get(i).isAnotated()) {
+                        currentLine = i;
+                        break;
+                    }
+                }
+                updateGUI();
+            }
+
         });
 
         saveButton.addActionListener(e -> {

@@ -20,6 +20,10 @@ public class CommentsFile {
         lines.get(lineIndex).setScore(score);
     }
 
+    public boolean deleteScore(int lineIndex) {
+        return lines.get(lineIndex).deleteScore();
+    }
+
     public int linesCount() {
         return lines.size();
     }
