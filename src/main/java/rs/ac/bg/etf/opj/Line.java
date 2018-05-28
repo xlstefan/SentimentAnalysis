@@ -45,6 +45,14 @@ public class Line {
         isAnotated = true;
     }
 
+    public boolean deleteScore() {
+        if (isAnotated) {
+            isAnotated = false;
+            return true;
+        }
+        return false;
+    }
+
     public int getScore() {
         return score;
     }
@@ -67,4 +75,5 @@ public class Line {
 
         return result;
     }
+
 }
