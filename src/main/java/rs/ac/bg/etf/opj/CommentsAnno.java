@@ -103,7 +103,7 @@ public class CommentsAnno extends JFrame {
         commentsArea.setEditable(false);
         commentsArea.setLineWrap(true);
         commentsArea.setWrapStyleWord(true);
-        commentsArea.setFont(new Font("serif", Font.PLAIN, 22));
+        commentsArea.setFont(new Font("Arial", Font.PLAIN, 22));
         commentsArea.setPreferredSize(textAreaDimension);
         upperPanel.setLayout(new BorderLayout());
         upperPanel.add("Center", commentsArea);
@@ -181,6 +181,7 @@ public class CommentsAnno extends JFrame {
             JSlider slider = (JSlider) e.getSource();
             if (!slider.getValueIsAdjusting()) {
                 commentsFile.writeScore(currentLine, slider.getValue());
+                updateScrollPane();
                 if (jumpToNext) {
                     for (int i = currentLine; i < commentsFile.getLines().size(); i++) {
                         if (!commentsFile.getLines().get(i).isAnotated()) {
@@ -194,7 +195,9 @@ public class CommentsAnno extends JFrame {
         });
 
         eraseScoreButton.addActionListener(e -> {
-            if (commentsFile.deleteScore(currentLine)) updateGUI();
+            if (commentsFile.deleteScore(currentLine)) {
+                updateGUI();
+            }
             if (jumpToNext) {
                 for (int i = currentLine + 1; i < commentsFile.getLines().size(); i++) {
                     if (!commentsFile.getLines().get(i).isAnotated()) {
@@ -253,9 +256,10 @@ public class CommentsAnno extends JFrame {
     }
 
     private void updateScrollPane() {
-        scrollPaneListModel.clear();
-        commentsFile.getLines()
-                .forEach(l -> scrollPaneListModel.addElement(l.toString().replace("\t", " ")));
+        System.out.println("Update called");
+        //scrollPaneListModel.clear();
+        //scrollPaneListModel.set(currentLine - 1, commentsFile.getLine(currentLine - 1).toString().replace("\t", " "));
+        scrollPaneListModel.setElementAt (commentsFile.getLine(currentLine).toString().replace("\t", " "),currentLine);
 
         scrollPaneList.setSelectedIndex(currentLine);
         scrollPaneList.ensureIndexIsVisible(currentLine);
@@ -266,7 +270,12 @@ public class CommentsAnno extends JFrame {
         commentsFile = FileHandler.createCommentsFile(filePath);
 
         initializeGUI();
+
+        commentsFile.getLines()
+                .forEach(l -> scrollPaneListModel.addElement(l.toString().replace("\t", " ")));
+
         addListeners();
+
 
         updateGUI();
     }
