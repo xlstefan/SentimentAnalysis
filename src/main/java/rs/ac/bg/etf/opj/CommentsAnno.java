@@ -120,6 +120,13 @@ public class CommentsAnno extends JFrame {
         scoreSlider.setMinorTickSpacing(1);
         scoreSlider.setPaintTicks(true);
         scoreSlider.setPaintLabels(true);
+        scoreSlider.setUI(new MetalSliderUI() {
+            protected void scrollDueToClickInTrack(int direction) {
+                //this is required so that after click on label slider goes to label and not 1 tic to side
+                int value = this.valueForXPosition(slider.getMousePosition().x);
+                slider.setValue(value);
+            }
+        });
 
         lowerPanel.add(scoreSlider);
         lowerPanel.add(eraseScoreButton);
@@ -259,7 +266,7 @@ public class CommentsAnno extends JFrame {
         System.out.println("Update called");
         //scrollPaneListModel.clear();
         //scrollPaneListModel.set(currentLine - 1, commentsFile.getLine(currentLine - 1).toString().replace("\t", " "));
-        scrollPaneListModel.setElementAt (commentsFile.getLine(currentLine).toString().replace("\t", " "),currentLine);
+        scrollPaneListModel.setElementAt(commentsFile.getLine(currentLine).toString().replace("\t", " "), currentLine);
 
         scrollPaneList.setSelectedIndex(currentLine);
         scrollPaneList.ensureIndexIsVisible(currentLine);
